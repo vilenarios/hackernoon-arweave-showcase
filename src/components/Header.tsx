@@ -4,6 +4,7 @@ import hnLogo from '../assets/hn-logo.png';
 interface HeaderProps {
   enhancedMode: boolean;
   onEnhancedToggle: () => void;
+  onSearchChange: (searchTerm: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ enhancedMode, onEnhancedToggle }) => {
@@ -96,7 +97,7 @@ export const Header: React.FC<HeaderProps> = ({ enhancedMode, onEnhancedToggle }
             }}
             title="Visit arweave.hackernoon.com"
           >
-            <span>on </span>
+            <span style={{ marginRight: '6px' }}>on</span>
             <span>ARWEAVE</span>
           </a>
         </div>
