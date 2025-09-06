@@ -1,69 +1,148 @@
-# React + TypeScript + Vite
+# HackerNoon Arweave Gallery
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React application to browse HackerNoon articles permanently stored on the Arweave blockchain. Features enhanced article cards with metadata fetching, staggered loading to prevent rate limiting, and both dark/light theme support.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 📰 Browse HackerNoon articles stored on Arweave
+- 🔍 Enhanced metadata parsing from article content (TLDR, author, tags, reading time)
+- ⚡ Staggered loading with skeleton loaders to prevent gateway rate limiting
+- 🎨 Dark/light theme support with system preference detection
+- 🔄 Infinite scroll with pagination
+- 📱 Responsive grid layout (1-4 columns based on screen size)
+- 🚀 Optimized for Arweave deployment with relative paths
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Frontend**: React 18 + TypeScript
+- **Styling**: Tailwind CSS
+- **Build Tool**: Vite
+- **GraphQL**: Apollo Client
+- **Blockchain**: Arweave (permanent storage)
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Getting Started
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+### Prerequisites
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Node.js 18+ 
+- npm or yarn
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/vilenarios/hackernoon-arweave-showcase.git
+cd hackernoon-arweave-showcase
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Building for Production
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Build for production
+npm run build
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Preview production build
+npm run preview
 ```
+
+The build is configured for deployment on Arweave or other platforms where the app doesn't live at the domain root.
+
+## Configuration
+
+### Arweave Gateway
+
+The app uses ar.io gateways to fetch article content. The gateway URL is configured in `src/lib/gateway.ts`.
+
+### GraphQL Endpoint
+
+The Arweave GraphQL endpoint is configured in `src/lib/apollo-client.ts` to query HackerNoon articles by wallet address.
+
+### Rate Limiting
+
+The app implements intelligent rate limiting to prevent 429 errors:
+- Staggered card rendering (150ms delays)
+- Staggered metadata fetching (200ms intervals)
+- Skeleton loaders for smooth UX during loading
+
+## Project Structure
+
+```
+src/
+├── components/          # React components
+│   ├── ArticleCard.tsx     # Basic article card
+│   ├── ArticleGrid.tsx     # Grid layout with infinite scroll
+│   ├── EnhancedArticleCard.tsx  # Enhanced card with metadata
+│   ├── Header.tsx          # App header with theme toggle
+│   └── SkeletonCard.tsx    # Loading skeleton
+├── hooks/              # Custom React hooks
+│   └── useHackernoonArticles.ts  # Article fetching logic
+├── lib/                # Utilities and configuration
+│   ├── apollo-client.ts    # GraphQL client setup
+│   ├── article-parser.ts   # HTML metadata parsing
+│   ├── gateway.ts          # Arweave gateway configuration
+│   └── queries.ts          # GraphQL queries
+└── types/              # TypeScript type definitions
+    └── article.ts          # Article data types
+```
+
+## Features in Detail
+
+### Enhanced Article Cards
+
+- **Metadata Parsing**: Extracts TLDR, author info, tags, and reading time from article HTML
+- **Progressive Loading**: Shows basic info immediately, enhances with metadata as it loads
+- **Hover Previews**: Desktop users see TLDR previews on card hover
+- **Smart Truncation**: 3-line descriptions with 300-character TLDR parsing
+
+### Rate Limiting Prevention
+
+- **Staggered Rendering**: Cards appear progressively to avoid overwhelming gateways
+- **Request Throttling**: Metadata requests spaced 200ms apart
+- **Graceful Fallbacks**: Falls back to transaction metadata if enhanced parsing fails
+
+### Theme Support
+
+- **System Detection**: Automatically detects user's system theme preference
+- **Manual Toggle**: Users can override with manual theme switching
+- **Persistent Storage**: Theme preference saved to localStorage
+
+## Deployment
+
+### Arweave Deployment
+
+The app is configured for Arweave deployment with:
+- Relative asset paths (`base: './'` in `vite.config.ts`)
+- Optimized bundle size
+- No external dependencies at runtime
+
+### Other Platforms
+
+Works on any static hosting platform:
+- Vercel
+- Netlify  
+- GitHub Pages
+- Traditional web servers
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- HackerNoon for creating quality tech content
+- Arweave for permanent, decentralized storage
+- The ar.io gateway network for reliable access
