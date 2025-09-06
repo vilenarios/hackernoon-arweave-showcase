@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Article } from '../types/article';
 import { getGatewayUrl } from '../lib/gateway';
-import { fetchArticleMetadata } from '../lib/article-parser';
+import { fetchArticleMetadata, getCachedMetadata, type ArticleMetadata } from '../lib/article-parser';
 import { SkeletonCard } from './SkeletonCard';
 
 interface EnhancedArticleCardProps {
@@ -17,34 +17,44 @@ export const EnhancedArticleCard: React.FC<EnhancedArticleCardProps> = ({
   enableMetadataFetch = true,
   index
 }) => {
-  const [metadata, setMetadata] = useState<any>(null);
+  const [metadata, setMetadata] = useState<ArticleMetadata | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showCard, setShowCard] = useState(false);
   
-  // Stagger card rendering with 150ms delay per card
-  const renderDelay = index * 150;
+  // Check if we have cached metadata to skip delays
+  const cachedMetadata = getCachedMetadata(article.id);
+  const hasCache = cachedMetadata !== null;
   
-  // Show card after render delay
+  // Stagger card rendering with 150ms delay per card, reset per page
+  const ARTICLES_PER_PAGE = 100;
+  const pageIndex = index % ARTICLES_PER_PAGE;
+  const renderDelay = hasCache ? 0 : pageIndex * 150; // Skip delay if cached
+  
+  // Show card after render delay (or immediately if cached)
   useEffect(() => {
-    const renderTimer = setTimeout(() => {
+    if (hasCache) {
       setShowCard(true);
-    }, renderDelay);
-    
-    return () => clearTimeout(renderTimer);
-  }, [renderDelay]);
+      setMetadata(cachedMetadata);
+    } else {
+      const renderTimer = setTimeout(() => {
+        setShowCard(true);
+      }, renderDelay);
+      
+      return () => clearTimeout(renderTimer);
+    }
+  }, [renderDelay, hasCache, cachedMetadata]);
   
   // Fetch metadata with additional delay to prevent rate limiting
   useEffect(() => {
-    if (!enableMetadataFetch || !showCard) return;
+    if (!enableMetadataFetch || !showCard || hasCache) return; // Skip if cached
     
     const controller = new AbortController();
-    let timeoutId: number;
     
-    // Additional delay for metadata fetching: base delay + stagger delay
-    const metadataDelay = 300 + (index * 200); // 200ms between each metadata fetch
+    // Additional delay for metadata fetching: base delay + stagger delay, reset per page
+    const metadataDelay = 300 + (pageIndex * 200); // 200ms between each metadata fetch
     
-    timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(() => {
       setLoading(true);
       fetchArticleMetadata(article.id, controller.signal)
         .then(data => {
@@ -59,7 +69,7 @@ export const EnhancedArticleCard: React.FC<EnhancedArticleCardProps> = ({
       clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [article.id, enableMetadataFetch, showCard, index]);
+  }, [article.id, enableMetadataFetch, showCard, hasCache, pageIndex]);
   
   const formatDate = (date?: Date | string) => {
     if (!date) return '';
@@ -68,6 +78,9 @@ export const EnhancedArticleCard: React.FC<EnhancedArticleCardProps> = ({
       month: 'short',
       day: 'numeric',
       year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
     }).format(dateObj);
   };
   
@@ -84,7 +97,8 @@ export const EnhancedArticleCard: React.FC<EnhancedArticleCardProps> = ({
   const displayTitle = metadata?.title || article.title;
   const displayDescription = metadata?.tldr || metadata?.description || article.description;
   const displayAuthor = metadata?.author || article.author;
-  const displayDate = metadata?.publishedDate || article.publishedAt;
+  // Prioritize accurate blockchain timestamp over HTML-parsed date
+  const displayDate = article.publishedAt || metadata?.publishedDate;
   const displayTags = metadata?.tags || article.tags;
   const displayReadingTime = metadata?.readingTime || article.readingTime;
   

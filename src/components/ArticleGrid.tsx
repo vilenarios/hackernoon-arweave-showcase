@@ -11,6 +11,10 @@ interface ArticleGridProps {
   onLoadMore: () => void;
   isDark: boolean;
   enhancedMode: boolean;
+  isFiltered?: boolean;
+  totalArticles?: number;
+  filteredCount?: number;
+  searchTerm?: string;
 }
 
 export const ArticleGrid: React.FC<ArticleGridProps> = ({
@@ -20,6 +24,10 @@ export const ArticleGrid: React.FC<ArticleGridProps> = ({
   onLoadMore,
   isDark,
   enhancedMode,
+  isFiltered = false,
+  totalArticles = 0,
+  filteredCount = 0,
+  searchTerm = '',
 }) => {
   const { ref, inView } = useInView({
     threshold: 0.1,
@@ -35,8 +43,27 @@ export const ArticleGrid: React.FC<ArticleGridProps> = ({
   return (
     <div className="w-full" style={{ padding: '32px 20px' }}>
       <div className="max-w-[1400px] mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" style={{ gap: '24px' }}>
-          {articles.map((article, index) => (
+        {/* Search Results Header */}
+        {isFiltered && (
+          <div className="mb-10 text-center">
+            <div className="font-mono text-sm" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+              {filteredCount === 0 ? (
+                <>
+                  No articles found for <span className="font-bold" style={{ color: isDark ? '#ffffff' : '#000000' }}>"{searchTerm}"</span>
+                </>
+              ) : (
+                <>
+                  Showing {filteredCount} of {totalArticles} articles for <span className="font-bold" style={{ color: isDark ? '#ffffff' : '#000000' }}>"{searchTerm}"</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Articles Grid */}
+        {articles.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" style={{ gap: '24px' }}>
+            {articles.map((article, index) => (
             enhancedMode ? (
               <EnhancedArticleCard 
                 key={article.id} 
@@ -53,9 +80,24 @@ export const ArticleGrid: React.FC<ArticleGridProps> = ({
               />
             )
           ))}
-        </div>
+          </div>
+        ) : (
+          // Empty state for filtered results with no matches
+          isFiltered && (
+            <div className="text-center" style={{ padding: '80px 20px' }}>
+              <div className="font-mono" style={{ color: isDark ? '#6b7280' : '#9ca3af' }}>
+                <div className="text-4xl mb-4">🔍</div>
+                <div className="text-lg mb-2">No articles found</div>
+                <div className="text-sm mb-2">
+                  for <span className="font-bold" style={{ color: isDark ? '#ffffff' : '#000000' }}>"{searchTerm}"</span>
+                </div>
+                <div className="text-sm">Try a different search term</div>
+              </div>
+            </div>
+          )
+        )}
         
-        {hasMore && (
+        {hasMore && !isFiltered && (
           <div ref={ref} className="flex justify-center" style={{ padding: '48px 0' }}>
             {loading ? (
               <div className="flex items-center gap-3">

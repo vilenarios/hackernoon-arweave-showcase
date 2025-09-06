@@ -4,17 +4,32 @@ import { apolloClient } from './lib/apollo-client';
 import { useHackernoonArticles } from './hooks/useHackernoonArticles';
 import { Header } from './components/Header';
 import { ArticleGrid } from './components/ArticleGrid';
+import { RightFlyout } from './components/RightFlyout';
 
 function AppContent() {
-  const { articles, loading, error, hasMore, loadMore } = useHackernoonArticles();
+  const [searchTerm, setSearchTerm] = useState('');
+  const { articles, loading, error, hasMore, loadMore, isFiltered, totalArticles, filteredCount } = useHackernoonArticles(searchTerm);
   const [isDark, setIsDark] = useState(true);
   const [enhancedMode, setEnhancedMode] = useState(true);
+  const [showFlyout, setShowFlyout] = useState(false);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setIsDark(savedTheme ? savedTheme === 'dark' : prefersDark);
   }, []);
+
+  // Apply theme to document
+  useEffect(() => {
+    if (isDark) {
+      document.body.classList.add('dark');
+      document.documentElement.style.colorScheme = 'dark';
+    } else {
+      document.body.classList.remove('dark');
+      document.documentElement.style.colorScheme = 'light';
+    }
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -24,8 +39,9 @@ function AppContent() {
     window.addEventListener('storage', handleStorageChange);
     
     // Custom event for same-window theme changes
-    const handleThemeChange = (e: any) => {
-      setIsDark(e.detail === 'dark');
+    const handleThemeChange = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      setIsDark(customEvent.detail === 'dark');
     };
     window.addEventListener('themeChange', handleThemeChange);
     
@@ -34,6 +50,18 @@ function AppContent() {
       window.removeEventListener('themeChange', handleThemeChange);
     };
   }, []);
+
+  const handleSearchChange = (newSearchTerm: string) => {
+    setSearchTerm(newSearchTerm);
+  };
+
+  const handleMenuToggle = () => {
+    setShowFlyout(!showFlyout);
+  };
+
+  const handleFlyoutClose = () => {
+    setShowFlyout(false);
+  };
 
   if (error) {
     return (
@@ -71,8 +99,7 @@ function AppContent() {
   return (
     <div style={{ backgroundColor: isDark ? '#0f1419' : '#f5f5f5', minHeight: '100vh' }}>
       <Header 
-        enhancedMode={enhancedMode} 
-        onEnhancedToggle={() => setEnhancedMode(!enhancedMode)} 
+        onMenuToggle={handleMenuToggle}
       />
       <main>
         {articles.length === 0 ? (
@@ -90,9 +117,23 @@ function AppContent() {
             onLoadMore={loadMore}
             isDark={isDark}
             enhancedMode={enhancedMode}
+            isFiltered={isFiltered}
+            totalArticles={totalArticles}
+            filteredCount={filteredCount}
+            searchTerm={searchTerm}
           />
         )}
       </main>
+      
+      {/* Right Flyout */}
+      <RightFlyout 
+        isOpen={showFlyout}
+        onClose={handleFlyoutClose}
+        isDark={isDark}
+        enhancedMode={enhancedMode}
+        onEnhancedToggle={() => setEnhancedMode(!enhancedMode)}
+        onSearchChange={handleSearchChange}
+      />
     </div>
   );
 }

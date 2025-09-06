@@ -1,11 +1,12 @@
 import { useQuery } from '@apollo/client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { GET_HACKERNOON_ARTICLES, HACKERNOON_WALLET } from '../lib/queries';
+import { getCachedMetadata } from '../lib/article-parser';
 import type { Article, TransactionEdge } from '../types/article';
 
 const ARTICLES_PER_PAGE = 100;
 
-export const useHackernoonArticles = () => {
+export const useHackernoonArticles = (searchTerm: string = '') => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -96,11 +97,67 @@ export const useHackernoonArticles = () => {
     }
   }, [cursor, hasMore, loading, fetchMore]);
 
+  // Filter articles based on search term
+  const filteredArticles = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return articles;
+    }
+
+    const searchLower = searchTerm.toLowerCase().trim();
+    
+    return articles.filter(article => {
+      // Search in title
+      if (article.title?.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+      
+      // Search in description
+      if (article.description?.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+      
+      // Search in author
+      if (article.author?.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+      
+      // Search in tags
+      if (article.tags.some(tag => tag.toLowerCase().includes(searchLower))) {
+        return true;
+      }
+      
+      // Search in enhanced metadata if available
+      const enhancedMetadata = getCachedMetadata(article.id);
+      if (enhancedMetadata) {
+        // Search in TLDR
+        if (enhancedMetadata.tldr?.toLowerCase().includes(searchLower)) {
+          return true;
+        }
+        
+        // Search in searchable content (article body)
+        if (enhancedMetadata.searchableContent?.toLowerCase().includes(searchLower)) {
+          return true;
+        }
+        
+        // Search in enhanced tags
+        if (enhancedMetadata.tags?.some(tag => tag.toLowerCase().includes(searchLower))) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
+  }, [articles, searchTerm]);
+
   return {
-    articles,
+    articles: filteredArticles,
+    allArticles: articles, // Keep reference to all articles for debugging
     loading,
     error,
     hasMore,
     loadMore,
+    isFiltered: searchTerm.trim().length > 0,
+    totalArticles: articles.length,
+    filteredCount: filteredArticles.length,
   };
 };

@@ -1,6 +1,6 @@
 import { getGatewayUrl } from './gateway';
 
-interface ArticleMetadata {
+export interface ArticleMetadata {
   title?: string;
   description?: string;
   author?: string;
@@ -10,10 +10,21 @@ interface ArticleMetadata {
   tldr?: string;
   imageUrl?: string;
   readingTime?: number;
+  searchableContent?: string; // Extracted text content for search
 }
 
 // Cache to avoid repeated fetches
 const metadataCache = new Map<string, ArticleMetadata>();
+
+// Export function to get cached metadata for search
+export const getCachedMetadata = (txId: string): ArticleMetadata | null => {
+  return metadataCache.get(txId) || null;
+};
+
+// Export function to get all cached metadata for search
+export const getAllCachedMetadata = (): Map<string, ArticleMetadata> => {
+  return new Map(metadataCache);
+};
 
 export const parseHackerNoonHTML = (html: string): ArticleMetadata => {
   const metadata: ArticleMetadata = {};
@@ -72,11 +83,35 @@ export const parseHackerNoonHTML = (html: string): ArticleMetadata => {
     metadata.imageUrl = imgMatch[1];
   }
   
-  // Estimate reading time from content length
+  // Estimate reading time from content length and extract searchable content
   const contentMatch = html.match(/<article[^>]*>(.*?)<\/article>/si);
   if (contentMatch) {
-    const wordCount = contentMatch[1].replace(/<[^>]*>/g, '').split(/\s+/).length;
+    const cleanContent = contentMatch[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const wordCount = cleanContent.split(/\s+/).length;
     metadata.readingTime = Math.ceil(wordCount / 200);
+    
+    // Store first 1000 characters of clean content for search
+    metadata.searchableContent = cleanContent.slice(0, 1000);
+  }
+  
+  // If no article tag, try to extract from main content areas
+  if (!metadata.searchableContent) {
+    // Try main content selectors
+    const mainContentMatches = [
+      html.match(/<main[^>]*>(.*?)<\/main>/si),
+      html.match(/<div[^>]*class="[^"]*content[^"]*"[^>]*>(.*?)<\/div>/si),
+      html.match(/<div[^>]*class="[^"]*post[^"]*"[^>]*>(.*?)<\/div>/si)
+    ];
+    
+    for (const match of mainContentMatches) {
+      if (match) {
+        const cleanContent = match[1].replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (cleanContent.length > 100) {
+          metadata.searchableContent = cleanContent.slice(0, 1000);
+          break;
+        }
+      }
+    }
   }
   
   return metadata;
