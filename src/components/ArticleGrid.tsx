@@ -36,13 +36,14 @@ export const ArticleGrid: React.FC<ArticleGridProps> = ({
     <div className="w-full" style={{ padding: '32px 20px' }}>
       <div className="max-w-[1400px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" style={{ gap: '24px' }}>
-          {articles.map((article) => (
+          {articles.map((article, index) => (
             enhancedMode ? (
               <EnhancedArticleCard 
                 key={article.id} 
                 article={article} 
                 isDark={isDark}
                 enableMetadataFetch={true}
+                index={index}
               />
             ) : (
               <ArticleCard 

@@ -35,7 +35,7 @@ export const parseHackerNoonHTML = (html: string): ArticleMetadata => {
       .replace(/<[^>]*>/g, '')
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 200);
+      .slice(0, 300);
   }
   
   // Parse author

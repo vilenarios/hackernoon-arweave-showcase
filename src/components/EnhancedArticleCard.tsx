@@ -2,29 +2,48 @@ import React, { useState, useEffect } from 'react';
 import type { Article } from '../types/article';
 import { getGatewayUrl } from '../lib/gateway';
 import { fetchArticleMetadata } from '../lib/article-parser';
+import { SkeletonCard } from './SkeletonCard';
 
 interface EnhancedArticleCardProps {
   article: Article;
   isDark: boolean;
   enableMetadataFetch?: boolean;
+  index: number;
 }
 
 export const EnhancedArticleCard: React.FC<EnhancedArticleCardProps> = ({ 
   article, 
   isDark,
-  enableMetadataFetch = true 
+  enableMetadataFetch = true,
+  index
 }) => {
   const [metadata, setMetadata] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showCard, setShowCard] = useState(false);
   
+  // Stagger card rendering with 150ms delay per card
+  const renderDelay = index * 150;
+  
+  // Show card after render delay
   useEffect(() => {
-    if (!enableMetadataFetch) return;
+    const renderTimer = setTimeout(() => {
+      setShowCard(true);
+    }, renderDelay);
+    
+    return () => clearTimeout(renderTimer);
+  }, [renderDelay]);
+  
+  // Fetch metadata with additional delay to prevent rate limiting
+  useEffect(() => {
+    if (!enableMetadataFetch || !showCard) return;
     
     const controller = new AbortController();
     let timeoutId: number;
     
-    // Fetch metadata after a short delay to avoid unnecessary requests
+    // Additional delay for metadata fetching: base delay + stagger delay
+    const metadataDelay = 300 + (index * 200); // 200ms between each metadata fetch
+    
     timeoutId = setTimeout(() => {
       setLoading(true);
       fetchArticleMetadata(article.id, controller.signal)
@@ -34,13 +53,13 @@ export const EnhancedArticleCard: React.FC<EnhancedArticleCardProps> = ({
           }
         })
         .finally(() => setLoading(false));
-    }, 500);
+    }, metadataDelay);
     
     return () => {
       clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [article.id, enableMetadataFetch]);
+  }, [article.id, enableMetadataFetch, showCard, index]);
   
   const formatDate = (date?: Date | string) => {
     if (!date) return '';
@@ -69,6 +88,11 @@ export const EnhancedArticleCard: React.FC<EnhancedArticleCardProps> = ({
   const displayTags = metadata?.tags || article.tags;
   const displayReadingTime = metadata?.readingTime || article.readingTime;
   
+  // Show skeleton while waiting for render delay
+  if (!showCard) {
+    return <SkeletonCard isDark={isDark} />;
+  }
+
   return (
     <article 
       onClick={handleClick}
@@ -162,13 +186,13 @@ export const EnhancedArticleCard: React.FC<EnhancedArticleCardProps> = ({
         
         {/* Description */}
         {displayDescription && (
-          <p className="line-clamp-2" style={{ 
+          <p className="line-clamp-3" style={{ 
             fontSize: '14px',
             lineHeight: '1.6',
             marginBottom: '16px',
             color: isDark ? '#9ca3af' : '#4b5563' 
           }}>
-            {displayDescription.slice(0, 150)}...
+            {displayDescription.slice(0, 220)}...
           </p>
         )}
         
